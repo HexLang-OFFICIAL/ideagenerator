@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Horde AI Image Generator</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 2rem; background: #111; color: #eee; }
+    input, button { padding: 0.5rem; font-size: 1rem; margin: 0.5rem; width: 300px; }
+    img { max-width: 100%; margin-top: 1rem; border: 2px solid #444; }
+  </style>
+</head>
+<body>
+  <h1>⚔️ Horde AI Image Generator</h1>
+  <input id="prompt" type="text" placeholder="Enter your spell (prompt)..." />
+  <button onclick="generateImage()">Summon Image</button>
+  <p id="status"></p>
+  <img id="output" src="" alt="Generated image will appear here" />
+
+  <script>
+    async function generateImage() {
+      const prompt = document.getElementById("prompt").value;
+      const status = document.getElementById("status");
+      const img = document.getElementById("output");
+
+      if (!prompt) return alert("You must enter a prompt, my mage.");
+
+      status.textContent = "Sending spell to the Horde...";
+      img.src = "";
+
+      const job = await fetch("https://stablehorde.net/api/v2/generate/async", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": "0000000000"  // Anonymous key
+        },
+        body: JSON.stringify({
+          prompt,
+          params: {
+            n: 1,
+            width: 512,
+            height: 512,
+            steps: 30,
+            sampler_name: "k_euler",
+            cfg_scale: 7
+          },
+          nsfw: false,
+          censor_nsfw: true
+        })
+      }).then(res => res.json());
+
+      const { id } = job;
+      if (!id) return status.textContent = "Failed to start generation.";
+
+      status.textContent = "🧪 Brewing image... (this can take ~30s)";
+
+      let imageUrl = null;
+      while (!imageUrl) {
+        await new Promise(r => setTimeout(r, 3000));  // wait 3 sec
+        const result = await fetch(`https://stablehorde.net/api/v2/generate/status/${id}`)
+          .then(res => res.json());
+
+        if (result.done && result.generations && result.generations.length > 0) {
+          imageUrl = result.generations[0].img;
+        }
+      }
+
+      status.textContent = "✨ Spell complete!";
+      img.src = imageUrl;
+    }
+  </script>
+</body>
+</html>
