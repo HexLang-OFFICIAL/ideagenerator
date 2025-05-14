@@ -2,19 +2,36 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Horde AI Image Generator</title>
+  <title>AI Image + Chat Assistant</title>
   <style>
-    body { font-family: sans-serif; text-align: center; padding: 2rem; background: #111; color: #eee; }
-    input, button { padding: 0.5rem; font-size: 1rem; margin: 0.5rem; width: 300px; }
-    img { max-width: 100%; margin-top: 1rem; border: 2px solid #444; }
+    body { background: #111; color: #eee; font-family: sans-serif; text-align: center; padding: 2rem; }
+    input, button, textarea { width: 80%; padding: 0.5rem; font-size: 1rem; margin: 0.5rem; border: none; border-radius: 5px; }
+    button { background: #333; color: #fff; cursor: pointer; }
+    img { max-width: 90%; margin-top: 1rem; border: 2px solid #444; }
+    #chatBox { text-align: left; max-width: 800px; margin: 2rem auto; background: #222; padding: 1rem; border-radius: 10px; }
+    .user { color: #9cf; font-weight: bold; }
+    .bot { color: #cfc; }
   </style>
 </head>
 <body>
-  <h1>⚔️ Horde AI Image Generator</h1>
-  <input id="prompt" type="text" placeholder="Enter your spell (prompt)..." />
-  <button onclick="generateImage()">Summon Image</button>
-  <p id="status"></p>
-  <img id="output" src="" alt="Generated image will appear here" />
+  <h1>🎨 + 🤖 AI Playground</h1>
+
+  <!-- Image Generator -->
+  <section>
+    <h2>🖼️ Image Generator</h2>
+    <input id="prompt" type="text" placeholder="Describe your image..." />
+    <button onclick="generateImage()">Generate Image</button>
+    <p id="status"></p>
+    <img id="output" src="" />
+  </section>
+
+  <!-- Chat Assistant -->
+  <section>
+    <h2>💬 AI Chat Assistant</h2>
+    <textarea id="chatInput" placeholder="Ask me anything..." rows="3"></textarea><br>
+    <button onclick="chat()">Send</button>
+    <div id="chatBox"></div>
+  </section>
 
   <script>
     async function generateImage() {
@@ -22,16 +39,16 @@
       const status = document.getElementById("status");
       const img = document.getElementById("output");
 
-      if (!prompt) return alert("You must enter a prompt, my mage.");
+      if (!prompt) return alert("You gotta type something to summon an image!");
 
-      status.textContent = "Sending spell to the Horde...";
+      status.textContent = "Sending to Horde...";
       img.src = "";
 
       const job = await fetch("https://stablehorde.net/api/v2/generate/async", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "apikey": "0000000000"  // Anonymous key
+          "apikey": "EtwnRTMqVZLRSbSNtxZcAg"
         },
         body: JSON.stringify({
           prompt,
@@ -43,29 +60,50 @@
             sampler_name: "k_euler",
             cfg_scale: 7
           },
-          nsfw: true,
-          censor_nsfw: false
+          nsfw: false,
+          censor_nsfw: true
         })
       }).then(res => res.json());
 
-      const { id } = job;
+      const id = job.id;
       if (!id) return status.textContent = "Failed to start generation.";
 
-      status.textContent = "🧪 Brewing image... (this can take ~30s)";
+      status.textContent = "🧪 Brewing image...";
 
       let imageUrl = null;
       while (!imageUrl) {
-        await new Promise(r => setTimeout(r, 3000));  // wait 3 sec
-        const result = await fetch(`https://stablehorde.net/api/v2/generate/status/${id}`)
-          .then(res => res.json());
-
-        if (result.done && result.generations && result.generations.length > 0) {
+        await new Promise(r => setTimeout(r, 3000));
+        const result = await fetch(`https://stablehorde.net/api/v2/generate/status/${id}`).then(res => res.json());
+        if (result.done && result.generations?.length) {
           imageUrl = result.generations[0].img;
         }
       }
 
-      status.textContent = "✨ Spell complete!";
+      status.textContent = "✨ Image ready!";
       img.src = imageUrl;
+    }
+
+    async function chat() {
+      const input = document.getElementById("chatInput");
+      const chatBox = document.getElementById("chatBox");
+      const userText = input.value.trim();
+      if (!userText) return;
+
+      // Display user message
+      const userMsg = document.createElement("p");
+      userMsg.innerHTML = `<span class="user">You:</span> ${userText}`;
+      chatBox.appendChild(userMsg);
+
+      input.value = "Thinking...";
+      const res = await fetch("https://text.pollinations.ai/prompt/" + encodeURIComponent(userText));
+      const botReply = await res.text();
+
+      // Display AI response
+      const botMsg = document.createElement("p");
+      botMsg.innerHTML = `<span class="bot">AI:</span> ${botReply}`;
+      chatBox.appendChild(botMsg);
+
+      input.value = "";
     }
   </script>
 </body>
